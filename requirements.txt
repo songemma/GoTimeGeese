@@ -1,0 +1,3 @@
+protobuf==3.17.3
+pygame==2.0.2
+six==1.16.0
