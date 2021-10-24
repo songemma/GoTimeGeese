@@ -56,6 +56,7 @@ def quitgame():
     pygame.quit()
     quit()
 
+
 # game intro screen with title and "start" and "quit" buttons
 def game_intro():
     while True:
@@ -74,6 +75,7 @@ def game_intro():
 
         pygame.display.update()
         clock.tick(15)
+
 
 # start_game() helper function - ensures that goose is within display boundaries
 def check_boundaries(x, y, gooseWidth, gooseHeight):
@@ -94,6 +96,7 @@ def check_boundaries(x, y, gooseWidth, gooseHeight):
         y = 0
 
     return x, y
+
 
 # main game is started - move the goose around the screen
 def start_game():
@@ -132,16 +135,20 @@ def start_game():
             y_change = 0
 
         elif player_1_action == 1:
+            x_change = 0
             y_change = -speed
 
         elif player_1_action == 2:
             x_change = speed
+            y_change = 0
 
         elif player_1_action == 3:
+            x_change = 0
             y_change = speed
 
         elif player_1_action == 4:
             x_change = -speed
+            y_change = 0
 
         print(player_1_action)
         # update goose position
