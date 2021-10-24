@@ -8,12 +8,12 @@ clock = pygame.time.Clock()
 # setting the display
 displayWidth = 1024
 displayHeight = 768
-gameDisplay = pygame.display.set_mode((displayWidth,displayHeight))
+gameDisplay = pygame.display.set_mode((displayWidth, displayHeight))
 pygame.display.set_caption('Go Time Geese')
 
 # setting fonts and colours
-largeFont = pygame.font.SysFont("timesnewromanttf",115)
-smallFont = pygame.font.SysFont("timesnewromanttf",40)
+largeFont = pygame.font.SysFont("timesnewromanttf", 115)
+smallFont = pygame.font.SysFont("timesnewromanttf", 40)
 black = (0, 0, 0)
 white = (255, 255, 255)
 red = (200, 0, 0)
@@ -25,9 +25,10 @@ brightGreen = (0, 255, 0)
 background = pygame.Surface(gameDisplay.get_size())
 background.fill(white)
 
+
 def text_box(text, font, colour):
-   textSurf = font.render(text, True, colour)
-   return textSurf, textSurf.get_rect()
+    text_surf = font.render(text, True, colour)
+    return text_surf, text_surf.get_rect()
 
 
 def load_image(imagename, sizex, sizey):
@@ -36,20 +37,18 @@ def load_image(imagename, sizex, sizey):
     return image
 
 
-def button(msg,x,y,w,h,ic,ac,action=None):
+def button(msg, x, y, w, h, ic, ac, action=None):
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
     if x+w > mouse[0] > x and y+h > mouse[1] > y:
-        pygame.draw.rect(gameDisplay, ac,(x,y,w,h))
-        if click[0] == 1 and action != None:
-            # pygame.mixer.music.load('sounds/click.wav')
-            # pygame.mixer.music.play(0)
+        pygame.draw.rect(gameDisplay, ac, (x, y, w, h))
+        if click[0] == 1 and action is not None:
             action()
     else:
-        pygame.draw.rect(gameDisplay, ic,(x,y,w,h))
-    textSurf, textRect = text_box(msg, smallFont, black)
-    textRect.center = (x+w/2, y+h/2)
-    gameDisplay.blit(textSurf, textRect)
+        pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
+    text_surf, text_rect = text_box(msg, smallFont, black)
+    text_rect.center = (x+w/2, y+h/2)
+    gameDisplay.blit(text_surf, text_rect)
 
 
 def quitgame():
@@ -66,30 +65,30 @@ def game_intro():
                 quit()
 
         gameDisplay.blit(background, (0, 0))
-        TextSurf, TextRect = text_box("Go Time Geese", largeFont, black)
-        TextRect.center = (displayWidth/2, displayHeight/3)
-        gameDisplay.blit(TextSurf, TextRect)
+        text_surf, text_rect = text_box("Go Time Geese", largeFont, black)
+        text_rect.center = (displayWidth/2, displayHeight/3)
+        gameDisplay.blit(text_surf, text_rect)
 
-        button("Start",220,420,200,100,green,brightGreen,start_game)
-        button("Quit",620,420,200,100,red,brightRed,quitgame)
+        button("Start", 220, 420, 200, 100, green, brightGreen, start_game)
+        button("Quit", 620, 420, 200, 100, red, brightRed, quitgame)
 
         pygame.display.update()
         clock.tick(15)
 
 
 # start_game() helper function - ensures that goose is within display boundaries
-def check_boundaries(x, y, gooseWidth, gooseHeight):
+def check_boundaries(x, y, goose_width, goose_height):
     # going past right
-    if x > displayWidth - gooseWidth:
-        x = displayWidth - gooseWidth
+    if x > displayWidth - goose_width:
+        x = displayWidth - goose_width
 
     # going past left
     if x < 0:
         x = 0
 
     # going past bottom
-    if y > displayHeight - gooseHeight:
-        y = displayHeight - gooseHeight
+    if y > displayHeight - goose_height:
+        y = displayHeight - goose_height
 
     # going past top
     if y < 0:
@@ -110,9 +109,9 @@ def start_game():
 
     speed = 20
 
-    gooseWidth = 120
-    gooseHeight = 200
-    gooseImg = load_image('goose.png', gooseWidth, gooseHeight)
+    goose_width = 120
+    goose_height = 200
+    goose_img = load_image('goose.png', goose_width, goose_height)
 
     while True:
         gameDisplay.blit(background, (0, 0))
@@ -154,8 +153,8 @@ def start_game():
         # update goose position
         x += x_change
         y += y_change
-        x, y = check_boundaries(x, y, gooseWidth, gooseHeight)
-        gameDisplay.blit(gooseImg, (x,y))
+        x, y = check_boundaries(x, y, goose_width, goose_height)
+        gameDisplay.blit(goose_img, (x, y))
 
         pygame.display.update()
         clock.tick(60)
