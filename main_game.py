@@ -71,23 +71,47 @@ def main_menu():
 
 def waiting_room():
     menu = pygame_menu.Menu('Waiting...', displayWidth, displayHeight,
-                            theme=pygame_menu.themes.THEME_BLUE)
+                            theme=pygame_menu.themes.THEME_BLUE,
+                            onclose=pygame_menu.events.RESET)
 
     num_players = get_num_players()
     # players_joined = bluetooth_utils.number_of_devices()
     # test with dummy values
-    players_joined = random.randint(0, num_players)
 
-    menu.add.label(f"{players_joined}/{num_players}",
+    players_joined = 0
+
+    players_label = menu.add.label(f"{players_joined}/{num_players}",
+                                   align=pygame_menu.locals.ALIGN_CENTER,
+                                   font_size=100,
+                                   font_name=pygame_menu.font.FONT_PT_SERIF,
+                                   font_color=black, padding=10)
+    menu.add.label("players have joined",
                    align=pygame_menu.locals.ALIGN_CENTER,
-                   font_size=100,
+                   font_size=50,
                    font_name=pygame_menu.font.FONT_PT_SERIF,
-                   font_color=black, padding=0)
-    menu.add.button('Back to Main Menu', main_menu)
+                   font_color=black, padding=10)
 
-    if players_joined == num_players:
-        menu.add.button('Start Game', start_game)
+    while players_joined != num_players:
+        # Application events
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.QUIT:
+                exit()
 
+        if menu.is_enabled():
+            menu.draw(gameDisplay)
+            menu.update(events)
+
+        # Update surface
+        pygame.display.flip()
+
+        # Update players_joined
+        players_joined += 1
+        players_label.set_title(f"{players_joined}/{num_players}")
+        # Wait for 1 second
+        pygame.time.wait(1000)
+
+    menu.add.button('Start Game', start_game)
     menu.mainloop(gameDisplay)
 
 
