@@ -46,6 +46,14 @@ class _DeviceArray:
         return False
 
 
+# Global variables used to deliver the functionality advertised by the module.
+# Declared here to maintain compatibility with Python 3.7.
+_devices: _DeviceArray
+_serverSocket: bluetooth.BluetoothSocket
+_playerInfo: list
+_paused: bool
+
+
 class _PlayerThread(threading.Thread):
     """In charge of receiving bytes from the supplied socket and appropriately
     updating the relevant playerInfo fields. If player == -1, the thread will
@@ -116,12 +124,6 @@ class _ConnectionThread(threading.Thread):
                 _PlayerThread(index, client_socket).start()
             except OSError:
                 client_socket.close()
-
-
-_devices: _DeviceArray
-_serverSocket: bluetooth.BluetoothSocket
-_playerInfo: list
-_paused: bool
 
 
 def start(num_players: int) -> None:
