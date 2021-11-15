@@ -28,6 +28,12 @@ class Player:
     def get_y(self) -> float:
         return self._y
 
+    def get_row(self) -> int:
+        return self._row
+
+    def get_col(self) -> int:
+        return self._col
+
     def get_trail(self) -> iter:
         return iter(self._trail)
 
@@ -89,7 +95,7 @@ class Player:
 def game_start() -> int:
     """Helper function for asking the user for the number of players,
     starting bluetooth_utils, waiting for all players to connect, etc.
-    Return the number of players."""
+    Returns the number of players."""
 
     # Ask the user for the number of players.
     while True:
@@ -110,8 +116,13 @@ def game_start() -> int:
             print(f"\rConnected: {new_connected}/{num_players}       ", end='')
         if new_connected == num_players:
             break
+    print()
 
-    print("\nHere we go!")
+    # Un-pause the game in case somebody accidentally touched the pause
+    # button on their controller.
+    bluetooth_utils.clear_paused_status()
+
+    print("Here we go!")
     return num_players
 
 

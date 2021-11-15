@@ -6,8 +6,6 @@ _SERVER_NAME = "Go Time Geese"
 _SERVER_BACKLOG = 10
 _SERVER_GAME_FULL_RESPONSE = 255
 
-_CLIENT_ACTION_PRESSED = 100
-_CLIENT_ACTION_RELEASED = 101
 _CLIENT_ACTION_PAUSE = 200
 
 DIR_UP = 1
@@ -15,6 +13,26 @@ DIR_DOWN = 2
 DIR_LEFT = 3
 DIR_RIGHT = 4
 DIR_NONE = 5
+
+
+class _AtomicBool:
+    """Internally used to manage the paused/resumed state in a thread-safe manner."""
+    def __init__(self, value=False):
+        self._lock = threading.Lock()
+        self._value = value
+
+    def set(self, value: bool):
+        with self._lock:
+            self._value = value
+
+    def get(self) -> bool:
+        return self._value
+
+    def switch(self) -> bool:
+        with self._lock:
+            new_value = not self._value
+            self._value = new_value
+            return new_value
 
 
 class _DeviceArray:
@@ -50,13 +68,13 @@ class _DeviceArray:
 # Declared here to maintain compatibility with Python 3.7.
 _devices: _DeviceArray
 _serverSocket: bluetooth.BluetoothSocket
-_playerInfo: list
-_paused: bool
+_playerDirs: list
+_paused: _AtomicBool
 
 
 class _PlayerThread(threading.Thread):
     """In charge of receiving bytes from the supplied socket and appropriately
-    updating the relevant playerInfo fields. If player == -1, the thread will
+    updating the relevant playerDir field. If player == -1, the thread will
     simply wait for the client to disconnect and close the socket."""
     def __init__(self, player, socket):
         super().__init__()
@@ -64,7 +82,7 @@ class _PlayerThread(threading.Thread):
         self._socket = socket
 
     def run(self):
-        global _devices, _playerInfo, _paused
+        global _devices, _playerDirs, _paused
 
         # We wrap the logic for receiving data from the client in try-except so
         # that the thread gracefully terminates when _serverSocket is closed.
@@ -73,23 +91,19 @@ class _PlayerThread(threading.Thread):
                 data = self._socket.recv(1)
                 if not data:
                     break
-                user_in = data[0]
-                if user_in == _CLIENT_ACTION_PAUSE:
-                    _paused = True
-                elif user_in == _CLIENT_ACTION_PRESSED:
-                    _playerInfo[self._player][1] = True
-                elif user_in == _CLIENT_ACTION_RELEASED:
-                    _playerInfo[self._player][1] = False
-                else:
-                    _playerInfo[self._player][0] = user_in
+                if self._player != -1:
+                    user_in = data[0]
+                    if user_in == _CLIENT_ACTION_PAUSE:
+                        _paused.switch()
+                    else:
+                        _playerDirs[self._player] = user_in
         except OSError:
             pass
 
-        # The connection has ended. Clear the playerInfo fields and remove the
+        # The connection has ended. Reset the player's direction and remove the
         # device from _devices. Then, close the socket.
         if self._player != -1:
-            _playerInfo[self._player][0] = DIR_NONE
-            _playerInfo[self._player][1] = False
+            _playerDirs[self._player] = DIR_NONE
             _devices.remove_device(self._player)
         self._socket.close()
 
@@ -130,7 +144,7 @@ def start(num_players: int) -> None:
     """Starts the bluetooth_utils module. Call this function after a stop() call or at the
     beginning of the program to start allowing players to connect to the game. You MUST
     call this function before calling any of the other functions available in the module."""
-    global _devices, _serverSocket, _playerInfo, _paused
+    global _devices, _serverSocket, _playerDirs, _paused
 
     # Call stop() first to fool-proof against repeated calls.
     stop()
@@ -144,10 +158,10 @@ def start(num_players: int) -> None:
                                 profiles=[bluetooth.SERIAL_PORT_PROFILE],
                                 service_id=_SERVER_UUID)
 
-    # Initialize the the other globals.
+    # Initialize the other globals.
     _devices = _DeviceArray(num_players)
-    _playerInfo = [[DIR_NONE, False] for _ in range(num_players)]
-    _paused = False
+    _playerDirs = [DIR_NONE for _ in range(num_players)]
+    _paused = _AtomicBool()
 
     # Start a _ConnectionThread to begin accepting client connections.
     _ConnectionThread(_serverSocket).start()
@@ -163,34 +177,35 @@ def number_of_devices() -> int:
 def get_paused() -> bool:
     """Returns True if one of the players has paused the game."""
     global _paused
-    return _paused
+    return _paused.get()
+
+
+def clear_paused_status() -> None:
+    """Resets the paused status of the game to False. Useful to call after
+    all the players are joined so that the game doesn't start paused if someone
+    had accidentally touched pause on their controller."""
+    global _paused
+    _paused.set(False)
 
 
 def get_direction(player: int) -> int:
     """Returns the directional input currently supplied by the specified player.
     The returned value is one of DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, DIR_NONE.
     Note: Player numbering starts from 0."""
-    global _playerInfo
-    return _playerInfo[player][0]
-
-
-def get_action(player: int) -> bool:
-    """Returns True if the specified player is currently pressing the action button.
-    Note: Player numbering starts from 0."""
-    global _playerInfo
-    return _playerInfo[player][1]
+    global _playerDirs
+    return _playerDirs[player]
 
 
 def stop() -> None:
     """Stops the bluetooth_utils module and cleans up system resources. After you
     call this function, you must not call any of the other functions in the module
     unless you start it again. Note: This function is idempotent."""
-    global _devices, _serverSocket, _playerInfo, _paused
+    global _devices, _serverSocket, _playerDirs, _paused
     try:
         _serverSocket.close()
         del _serverSocket
         del _devices
-        del _playerInfo
+        del _playerDirs
         del _paused
     except NameError:
         pass
