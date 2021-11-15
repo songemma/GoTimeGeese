@@ -1,203 +1,148 @@
-
-import pygame
-import random
-import pygame_menu
-#import bluetooth_utils
-
-pygame.init()
-clock = pygame.time.Clock()
-
-# setting the display
-displayWidth = 1024
-displayHeight = 768
-gameDisplay = pygame.display.set_mode((displayWidth, displayHeight))
-pygame.display.set_caption('Go Time Geese')
-
-# setting fonts and colours
-largeFont = pygame.font.SysFont("timesnewromanttf", 115)
-mediumFont = pygame.font.SysFont("timesnewromanttf", 70)
-smallFont = pygame.font.SysFont("timesnewromanttf", 40)
-black = (0, 0, 0)
-white = (255, 255, 255)
-red = (200, 0, 0)
-green = (0, 200, 0)
-blue = (65,102,245)
-brightRed = (255, 0, 0)
-brightGreen = (0, 255, 0)
-brightBlue = (69,177,232)
-_players = 2 # default
-
-# creating white background
-background = pygame.Surface(gameDisplay.get_size())
-background.fill(white)
+import bluetooth_utils
+import collections
+import math
 
 
-def text_box(text, font, colour):
-    text_surf = font.render(text, True, colour)
-    return text_surf, text_surf.get_rect()
+TRAIL_LEN = 5
+GRID_ROWS = 30
+GRID_COLS = 30
+GRID_CELL_DIM = 10
+
+# Declare these here as global variables so that we can access them
+# from within the Player class.
+game_grid: list
+player_points: list
 
 
-def load_image(imagename, sizex, sizey):
-    image = pygame.image.load(imagename)
-    image = pygame.transform.scale(image, (sizex, sizey))
-    return image
+class Player:
+    def __init__(self, player_index: int):
+        self._player_index = player_index
+        self._row, self._col = Player._get_home_cell(player_index)
+        self._x = (self._col + 0.5) * GRID_CELL_DIM
+        self._y = (self._row + 0.5) * GRID_CELL_DIM
+        self._trail = collections.deque(maxlen=TRAIL_LEN)
+
+    def get_x(self) -> float:
+        return self._x
+
+    def get_y(self) -> float:
+        return self._y
+
+    def get_trail(self) -> iter:
+        return iter(self._trail)
+
+    def move(self, dx: float, dy: float):
+        pos_changed = False
+        # Execute the change dx.
+        if dx != 0:
+            self._x += dx
+            self._x = max(self._x, 0)
+            self._x = min(self._x, (GRID_COLS - 1) * GRID_CELL_DIM)
+            new_col = math.floor(self._x / GRID_CELL_DIM)
+            if self._col != new_col:
+                self._col = new_col
+                pos_changed = True
+        # Execute the change dy.
+        if dy != 0:
+            self._y += dy
+            self._y = max(self._y, 0)
+            self._y = min(self._y, (GRID_ROWS - 1) * GRID_CELL_DIM)
+            new_row = math.floor(self._y / GRID_CELL_DIM)
+            if self._row != new_row:
+                self._row = new_row
+                pos_changed = True
+        # If needed, update the trail, grid, etc.
+        if pos_changed:
+            prev_player = game_grid[self._row][self._col]
+            if prev_player != -1:
+                player_points[prev_player] -= 1
+            game_grid[self._row][self._col] = self._player_index
+            player_points[self._player_index] += 1
+            self._trail.append((self._row, self._col))
+
+    def reset(self):
+        # Clear the trail. Reset the points.
+        self._trail.clear()
+        player_points[self._player_index] = 0
+        # Clear every cell previously owned by this player.
+        for row in range(GRID_ROWS):
+            for col in range(GRID_COLS):
+                if game_grid[row][col] == self._player_index:
+                    game_grid[row][col] = -1
+        # Reset coordinates.
+        self._row, self._col = Player._get_home_cell(self._player_index)
+        self._x = (self._col + 0.5) * GRID_CELL_DIM
+        self._y = (self._row + 0.5) * GRID_CELL_DIM
+
+    @staticmethod
+    def _get_home_cell(player_index):
+        if player_index == 0:
+            return 0, 0
+        elif player_index == 1:
+            return GRID_ROWS - 1, GRID_COLS - 1
+        elif player_index == 2:
+            return 0, GRID_COLS - 1
+        elif player_index == 3:
+            return GRID_ROWS - 1, 0
 
 
-def quitgame():
-    pygame.quit()
-    quit()
+def game_start() -> int:
+    """Helper function for asking the user for the number of players,
+    starting bluetooth_utils, waiting for all players to connect, etc.
+    Return the number of players."""
 
-
-def set_num_players(value, num_players):
-    global _players
-    _players = num_players
-
-
-def get_num_players():
-    global _players
-    return _players
-
-
-# game intro screen with title and "start" and "quit" buttons
-def main_menu():
-    menu = pygame_menu.Menu('Go Time Geese', displayWidth, displayHeight,
-                            theme=pygame_menu.themes.THEME_BLUE)
-    menu.add.selector('Number of Players :', [('2', 2), ('3', 3), ('4', 4)],
-                      onchange=set_num_players,
-                      default=get_num_players() - 2)
-    menu.add.button('Head to Waiting Room', waiting_room)
-    menu.mainloop(gameDisplay)
-
-
-def waiting_room():
-    menu = pygame_menu.Menu('Waiting...', displayWidth, displayHeight,
-                            theme=pygame_menu.themes.THEME_BLUE,
-                            onclose=pygame_menu.events.RESET)
-
-    num_players = get_num_players()
-    # players_joined = bluetooth_utils.number_of_devices()
-    # test with dummy values
-
-    players_joined = 0
-
-    players_label = menu.add.label(f"{players_joined}/{num_players}",
-                                   align=pygame_menu.locals.ALIGN_CENTER,
-                                   font_size=100,
-                                   font_name=pygame_menu.font.FONT_PT_SERIF,
-                                   font_color=black, padding=10)
-    menu.add.label("players have joined",
-                   align=pygame_menu.locals.ALIGN_CENTER,
-                   font_size=50,
-                   font_name=pygame_menu.font.FONT_PT_SERIF,
-                   font_color=black, padding=10)
-
-    while players_joined != num_players:
-        # Application events
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.QUIT:
-                exit()
-
-        if menu.is_enabled():
-            menu.draw(gameDisplay)
-            menu.update(events)
-
-        # Update surface
-        pygame.display.flip()
-
-        # Update players_joined
-        players_joined += 1
-        players_label.set_title(f"{players_joined}/{num_players}")
-        # Wait for 1 second
-        pygame.time.wait(1000)
-
-    menu.add.button('Start Game', start_game)
-    menu.mainloop(gameDisplay)
-
-
-# start_game() helper function - ensures that goose is within display boundaries
-def check_boundaries(x, y, goose_width, goose_height):
-    # going past right
-    if x > displayWidth - goose_width:
-        x = displayWidth - goose_width
-
-    # going past left
-    if x < 0:
-        x = 0
-
-    # going past bottom
-    if y > displayHeight - goose_height:
-        y = displayHeight - goose_height
-
-    # going past top
-    if y < 0:
-        y = 0
-
-    return x, y
-
-
-# main game is started - move the goose around the screen
-def start_game():
-    # goose position is (x, y) where (0,0) is the top left corner of the screen
-    x = displayWidth * 0.43
-    y = displayHeight * 0.38
-
-    # change in position
-    x_change = 0
-    y_change = 0
-
-    speed = 20
-
-    goose_width = 120
-    goose_height = 200
-    goose_img = load_image('goose.png', goose_width, goose_height)
-
+    # Ask the user for the number of players.
     while True:
-        gameDisplay.blit(background, (0, 0))
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
+        user_in = input("Number of players? ")
+        if user_in.isnumeric():
+            num_players = int(user_in)
+            if 2 <= num_players <= 4:
+                break
+        print("Please enter a number between 2 and 4.")
 
-        # dummy variable to simulate player's action
-        player_1_action = random.randint(0, 4)
+    # Start bluetooth_utils and wait for everybody to connect.
+    bluetooth_utils.start(num_players)
+    prev_connected = -1
+    while True:
+        new_connected = bluetooth_utils.number_of_devices()
+        if prev_connected != new_connected:
+            prev_connected = new_connected
+            print(f"\rConnected: {new_connected}/{num_players}       ", end='')
+        if new_connected == num_players:
+            break
 
-        # 0 is neutral state (no moving)
-        # 1 is up, 2 is right, 3 is down, 4 is left
-        #     1
-        #  4     2
-        #     3
-
-        if player_1_action == 0:
-            x_change = 0
-            y_change = 0
-
-        elif player_1_action == 1:
-            x_change = 0
-            y_change = -speed
-
-        elif player_1_action == 2:
-            x_change = speed
-            y_change = 0
-
-        elif player_1_action == 3:
-            x_change = 0
-            y_change = speed
-
-        elif player_1_action == 4:
-            x_change = -speed
-            y_change = 0
-
-        print(player_1_action)
-        # update goose position
-        x += x_change
-        y += y_change
-        x, y = check_boundaries(x, y, goose_width, goose_height)
-        gameDisplay.blit(goose_img, (x, y))
-
-        pygame.display.update()
-        clock.tick(60)
+    print("\nHere we go!")
+    return num_players
 
 
-main_menu()
-quitgame()
+def game_stop():
+    bluetooth_utils.stop()
+    print("Thank you for playing!")
+
+
+def main():
+    global game_grid, player_points
+
+    num_players = game_start()
+    game_grid = [[-1 for _ in range(GRID_COLS)] for _ in range(GRID_ROWS)]
+    player_points = [0 for _ in range(num_players)]
+    players = [Player(index) for index in range(num_players)]
+
+    # TODO: Initialize pygame stuff.
+
+    while True:     # TODO: Update this condition with time limit.
+        # TODO: Emma
+
+        # TODO: Molly
+
+        if bluetooth_utils.get_paused():
+            # TODO: Blit "Paused" on the screen here.
+            while bluetooth_utils.get_paused():
+                pass
+
+    # TODO: Display who won.
+
+    game_stop()
+
+
+main()
