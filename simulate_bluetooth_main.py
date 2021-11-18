@@ -10,7 +10,7 @@ TRAIL_LEN = 5
 GRID_ROWS = 30
 GRID_COLS = 30
 GRID_CELL_DIM = 30
-FPS = 1
+FPS = 10
 
 # Declare these here as global variables so that we can access them
 # from within the Player class.
@@ -43,6 +43,8 @@ class Player:
 
     def move(self, dx: float, dy: float):
         pos_changed = False
+        old_row = self._col
+        old_col = self._row
         # Execute the change dx.
         if dx != 0:
             self._x += dx
@@ -68,7 +70,7 @@ class Player:
                 player_points[prev_player] -= 1
             game_grid[self._row][self._col] = self._player_index
             player_points[self._player_index] += 1
-            self._trail.append((self._row, self._col))
+            self._trail.append((old_row, old_col))
 
     def reset(self):
         # Clear the trail. Reset the points.
@@ -102,7 +104,6 @@ def game_start() -> int:
     Returns the number of players."""
 
     # Ask the user for the number of players.
-    """
     while True:
         user_in = input("Number of players? ")
         if user_in.isnumeric():
@@ -110,8 +111,6 @@ def game_start() -> int:
             if 2 <= num_players <= 4:
                 break
         print("Please enter a number between 2 and 4.")
-    """
-    num_players = 2
 
     # Start bluetooth_utils and wait for everybody to connect.
     #bluetooth_utils.start(num_players)
@@ -159,13 +158,21 @@ def main():
     white = (255, 255, 255)
     player0red = (255, 0, 0)
     player0darkRed = (139, 0, 0)
-    player0Trail = (255,99,71)
+    player0Trail = (233,150,122)
     player1yellow = (255, 255, 0)
     player1darkYellow = (102,102,0)
-    player1Trail = (250,250,210)
+    player1Trail = (240,230,140)
+    player2Blue = (0, 0, 255)
+    player2darkBlue = (25, 25, 112)
+    player2Trail = (173, 216, 230)
+    player3Green = (0, 255, 0)
+    player3darkGreen = (0, 100, 0)
+    player3Trail = (173,255,47)
     player_colours = [
         (player0red, player0darkRed, player0Trail),
-        (player1yellow, player1darkYellow, player1Trail)
+        (player1yellow, player1darkYellow, player1Trail),
+        (player2Blue, player2darkBlue, player2Trail),
+        (player3Green, player3darkGreen, player3Trail)
     ]
 
     windowWidth = GRID_CELL_DIM * GRID_COLS
