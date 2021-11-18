@@ -1,9 +1,8 @@
-#import bluetooth_utils
-import collections
-import math
-import random
 
+import bluetooth_utils
+import collections
 import pygame
+import math
 
 
 TRAIL_LEN = 5
@@ -113,11 +112,10 @@ def game_start() -> int:
         print("Please enter a number between 2 and 4.")
 
     # Start bluetooth_utils and wait for everybody to connect.
-    #bluetooth_utils.start(num_players)
+    bluetooth_utils.start(num_players)
     prev_connected = -1
     while True:
-        #new_connected = bluetooth_utils.number_of_devices()
-        new_connected = random.randint(1, num_players)
+        new_connected = bluetooth_utils.number_of_devices()
         if prev_connected != new_connected:
             prev_connected = new_connected
             print(f"\rConnected: {new_connected}/{num_players}       ", end='')
@@ -127,16 +125,17 @@ def game_start() -> int:
 
     # Un-pause the game in case somebody accidentally touched the pause
     # button on their controller.
-    #bluetooth_utils.clear_paused_status()
+    bluetooth_utils.clear_paused_status()
 
     print("Here we go!")
     return num_players
 
 
 def game_stop():
-    #bluetooth_utils.stop()
+    bluetooth_utils.stop()
     pygame.quit()
     print("Thank you for playing!")
+    quit()
 
 
 def main():
@@ -147,18 +146,21 @@ def main():
     player_points = [0 for _ in range(num_players)]
     players = [Player(index) for index in range(num_players)]
     game_grid = [[-1 for _ in range(GRID_COLS)] for _ in range(GRID_ROWS)]
+
+    # Initialize grid corners with player_num.
     for player_num in range(num_players):
         player = players[player_num]
         game_grid[player.get_row()][player.get_col()] = player_num
 
-    # Start Pygame
+    # Start Pygame.
     pygame.init()
 
+    # Set up colours.
     black = (0, 0, 0)
     white = (255, 255, 255)
-    player0red = (255, 0, 0)
-    player0darkRed = (139, 0, 0)
-    player0Trail = (233,150,122)
+    player0red = (255, 0, 0) # Player0's territory.
+    player0darkRed = (139, 0, 0) # Player0's current position.
+    player0Trail = (233,150,122) # Player0's trail.
     player1yellow = (255, 255, 0)
     player1darkYellow = (102,102,0)
     player1Trail = (240,230,140)
@@ -168,6 +170,12 @@ def main():
     player3Green = (0, 255, 0)
     player3darkGreen = (0, 100, 0)
     player3Trail = (173,255,47)
+
+    # player_colours[player_num][x]
+    # where x is one of the following:
+    # - 0 for territory,
+    # - 1 for current position,
+    # - 2 for trail
     player_colours = [
         (player0red, player0darkRed, player0Trail),
         (player1yellow, player1darkYellow, player1Trail),
@@ -182,51 +190,40 @@ def main():
 
     pygame.display.set_caption("Go Time Geese")
     clock = pygame.time.Clock()
-    game_time = 5 # number of minutes per round
+    game_time = 5 # Number of minutes per round.
     current_time = pygame.time.get_ticks()
 
-    DIR_UP = 1
-    DIR_DOWN = 2
-    DIR_LEFT = 3
-    DIR_RIGHT = 4
-    DIR_NONE = 5
 
     # Game loop with time condition.
     while current_time < game_time * 60 * 1000:
-        # TODO: Emma
-        current_time = pygame.time.get_ticks() #update current_time
+        # Update current_time.
+        current_time = pygame.time.get_ticks()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                current_time = game_time * 60 * 1000
+                game_stop()
 
         for player_num in range(num_players):
-            #player_dir = bluetooth_utils.get_direction(player_num)
-            player_dir = random.randint(1, 5)
+            player_dir = bluetooth_utils.get_direction(player_num)
             player_obj = players[player_num]
 
-            #if player_dir == bluetooth_utils.DIR_LEFT:
-            if player_dir == DIR_LEFT:
+            if player_dir == bluetooth_utils.DIR_LEFT:
                 x_change = -GRID_CELL_DIM
                 y_change = 0
 
-            #elif player_dir == bluetooth_utils.DIR_RIGHT:
-            elif player_dir == DIR_RIGHT:
+            elif player_dir == bluetooth_utils.DIR_RIGHT:
                 x_change = GRID_CELL_DIM
                 y_change = 0
 
-            #elif player_dir == bluetooth_utils.DIR_UP:
-            elif player_dir == DIR_UP:
+            elif player_dir == bluetooth_utils.DIR_UP:
                 y_change = -GRID_CELL_DIM
                 x_change = 0
 
-            #elif player_dir == bluetooth_utils.DIR_DOWN:
-            elif player_dir == DIR_DOWN:
+            elif player_dir == bluetooth_utils.DIR_DOWN:
                 y_change = GRID_CELL_DIM
                 x_change = 0
 
-            #elif player_dir == bluetooth_utils.DIR_NONE:
-            elif player_dir == DIR_NONE:
+            elif player_dir == bluetooth_utils.DIR_NONE:
                 x_change = 0
                 y_change = 0
 
@@ -235,13 +232,20 @@ def main():
                 y_change = 0
                 print("Error in player_dir")
 
-            player_obj.move(x_change, y_change) # update player position
+            # Update player position.
+            player_obj.move(x_change, y_change)
+
+        # TODO: Emre implements collision detection
 
         screen.fill(black)
 
+        # Draw the grid's territories.
         for row in range(GRID_ROWS):
             for column in range(GRID_COLS):
                 color = white
+                # If the square is claimed, draw it with the
+                # colour of whoever most recently claimed it.
+                # Otherwise, draw white (it is unclaimed territory).
                 if game_grid[row][column] != -1:
                     color = player_colours[game_grid[row][column]][0]
                 pygame.draw.rect(screen,
@@ -252,8 +256,11 @@ def main():
                                   GRID_CELL_DIM]
                                  )
 
+        # Draw the players' current positions and trails.
         for player_num in range(num_players):
             player_obj = players[player_num]
+
+            # Draw player_obj's trail.
             for (trail_row, trail_col) in player_obj.get_trail():
                 pygame.draw.rect(screen,
                                  player_colours[player_num][2],
@@ -262,6 +269,7 @@ def main():
                                   GRID_CELL_DIM,
                                   GRID_CELL_DIM]
                                  )
+            # Draw player_obj's current position.
             pygame.draw.rect(screen,
                              player_colours[player_num][1],
                              [player_obj.get_x(),
@@ -272,10 +280,24 @@ def main():
         pygame.display.update()
         clock.tick(FPS)
 
-        #if bluetooth_utils.get_paused():
-            # TODO: Blit "Paused" on the screen here.
-            #while bluetooth_utils.get_paused():
-                #pass
+        if bluetooth_utils.get_paused():
+            while True:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        game_stop()
+
+                # Draw pause screen.
+                screen.fill(white)
+                text_surface = pygame.font.SysFont("timesnewromanttf", 115).render("Paused", True, black)
+                text_rectangle = text_surface.get_rect()
+                text_rectangle.center = (windowWidth / 2, windowHeight / 3)
+                screen.blit(text_surface, text_rectangle)
+
+                pygame.display.update()
+                clock.tick(15)
+
+            while bluetooth_utils.get_paused():
+                pass
 
     # TODO: Display who won.
 
@@ -283,3 +305,4 @@ def main():
 
 
 main()
+
