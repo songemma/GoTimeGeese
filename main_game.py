@@ -10,10 +10,14 @@ GRID_ROWS = 30
 GRID_COLS = 30
 
 # Size/Dimension constants
-SCORE_BOARD_SIZE = 50
-SCORE_TEXT_SIZE = 30
 PAUSED_TEXT_SIZE = 100
 GRID_CELL_DIM = 10
+SCORE_BOARD_SIZE = 30
+SCORE_BOARD_SEPARATOR = 1
+SCORE_TEXT_SIZE = 22
+SCORE_TEXT_OFFSET_X = 8
+SCORE_TEXT_OFFSET_Y = 9
+SCORE_TEXT_DX = 76
 
 # Time constants
 FPS = 20
@@ -185,10 +189,13 @@ def main():
         (PLAYER_3_TERRITORY, PLAYER_3_SELF, PLAYER_3_TRAIL)
     ]
 
+    # Used in drawing the players' scores. Instantiated once and reused to
+    # help with game performance.
+    score_font = pygame.font.SysFont("timesnewromanttf", SCORE_TEXT_SIZE)
+
     window_width = GRID_CELL_DIM * GRID_COLS
     window_height = GRID_CELL_DIM * GRID_ROWS + SCORE_BOARD_SIZE
-    window_size = (window_width, window_height)
-    screen = pygame.display.set_mode(window_size)
+    screen = pygame.display.set_mode((window_width, window_height))
     pygame.display.set_caption("Go Time Geese")
 
     clock = pygame.time.Clock()
@@ -278,7 +285,14 @@ def main():
                              (GRID_CELL_DIM * player.get_col(), GRID_CELL_DIM * player.get_row(),
                               GRID_CELL_DIM, GRID_CELL_DIM))
         # Step 3: Draw the scoreboard.
-        # TODO: Implement this!
+        pygame.draw.rect(screen, BLACK, (0, GRID_CELL_DIM * GRID_ROWS, window_width, SCORE_BOARD_SEPARATOR))
+        for player_index in range(num_players):
+            score_text = f"P{player_index + 1}: {player_points[player_index]}"
+            text_surface = score_font.render(score_text, True, player_colors[player_index][1])
+            text_rect = text_surface.get_rect()
+            text_rect.left = SCORE_TEXT_OFFSET_X + player_index * SCORE_TEXT_DX
+            text_rect.top = GRID_CELL_DIM * GRID_ROWS + SCORE_TEXT_OFFSET_Y
+            screen.blit(text_surface, text_rect)
 
         pygame.display.update()
         clock.tick(FPS)
